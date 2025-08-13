@@ -2,539 +2,230 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Crack.ai — Your NEET Journey, Reimagined in VR</title>
-  <!-- A‑Frame CDN -->
+  <title>Crack.ai — Quest 3 Controller Ready Demo</title>
+
+  <!-- A-Frame core -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <!-- Optional extras -->
-  <script src="https://cdn.jsdelivr.net/npm/aframe-extras@7.7.0/dist/aframe-extras.min.js"></script>
+
+  <!-- Optional components for hand/controller interactions -->
+  <script src="https://unpkg.com/aframe-super-hands-component/dist/aframe-super-hands.min.js"></script>
+  <script src="https://unpkg.com/aframe-physics-system@4.0.1/dist/aframe-physics-system.min.js"></script>
+  <!-- event-set is handy for hover enter/leave states -->
   <script src="https://cdn.jsdelivr.net/npm/aframe-event-set-component@5.0.0/dist/aframe-event-set-component.min.js"></script>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
-
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    /* Global (2D overlay styles) */
-    :root{
-      --purple: #B36AF5; /* Bright Purple Accent */
-      --lavender: #8E58C9; /* Soft Lavender Purple */
-      --muted: #5D3B91; /* Muted Violet */
-      --deep: #3F2A5D; /* Dark Purple Grey */
-      --shadow: #2C1F3D; /* Deep Shadow Purple */
-      --black: #000000; /* Deep Black */
-      --glass-bg: rgba(179,106,245,0.06);
-      --glass-stroke: rgba(179,106,245,0.18);
+    body { margin: 0; font-family: Arial, sans-serif; background: #000; color: #fff; }
+    .hint {
+      position: fixed; left: 50%; transform: translateX(-50%); top: 8px;
+      background: rgba(0,0,0,0.6); padding:8px 12px; border-radius:8px; z-index: 10;
+      font-size: 13px; pointer-events: none;
     }
-    html, body { margin:0; height:100%; background:#000; font-family: Poppins, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
-    .hud {
-      position: fixed; inset: 0 0 auto 0; display:flex; align-items:center; justify-content:space-between; padding:12px 16px; pointer-events:none; z-index: 5;
-      background: linear-gradient(180deg, rgba(0,0,0,0.65), rgba(0,0,0,0));
+    .devlog {
+      position: fixed; right: 12px; bottom: 12px; background: rgba(0,0,0,0.6);
+      color: #cfcfd0; padding:10px 12px; border-radius:8px; font-size:12px;
+      max-width: 320px; pointer-events: auto;
     }
-    .brand { pointer-events:auto; display:flex; gap:10px; align-items:center; color:white; text-decoration:none; }
-    .brand .logo { width:28px; height:28px; border-radius:8px; background: radial-gradient(60% 60% at 40% 30%, var(--purple), transparent), linear-gradient(135deg, var(--shadow), #000); box-shadow: 0 0 18px rgba(179,106,245,.35), inset 0 0 18px rgba(179,106,245,.15); }
-    .brand span{ font-weight:800; letter-spacing:.5px; }
-    .nav {
-      pointer-events:auto; display:flex; gap:8px; backdrop-filter: blur(10px); background: var(--glass-bg); border:1px solid var(--glass-stroke); border-radius:14px; padding:6px;
-      box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 0 20px rgba(179,106,245,.07);
-    }
-    .nav button{ all:unset; color:#eee; padding:8px 12px; border-radius:10px; font-weight:600; font-size:14px; cursor:pointer; }
-    .nav button:hover{ background: rgba(179,106,245,.12); color:white; }
-    .nav .primary{ background: linear-gradient(180deg, rgba(179,106,245,.15), rgba(179,106,245,.05)); border:1px solid var(--glass-stroke); }
-
-    /* Floating footer quicklinks */
-    .footerHud {
-      position: fixed; inset: auto 0 10px 0; display:flex; justify-content:center; pointer-events:none; z-index:5;
-    }
-    .footerHud .footer {
-      pointer-events:auto; display:flex; gap:12px; padding:8px 12px; border-radius:12px; border:1px solid var(--glass-stroke); background: var(--glass-bg); backdrop-filter: blur(8px); color:#cfc7de;
-    }
-    .footer a { color:#cfc7de; text-decoration:none; font-size:12px; }
-    .footer a:hover{ color:white; }
-
-    /* On-screen prompt (enters VR hint) */
-    .prompt { position: fixed; left: 50%; transform: translateX(-50%); top: 64px; z-index:4; color:#c6b9e6; font-size:12px; letter-spacing:.4px; background: rgba(0,0,0,.35); padding:4px 10px; border-radius:10px; border:1px solid rgba(179,106,245,.25)}
-
-    /* XR button nudge */
-    .a-enter-vr-button { background: linear-gradient(180deg, #1a1a1a, #000); border:1px solid var(--deep) !important; color:#eee !important; }
-    .a-enter-vr-button:hover { background: linear-gradient(180deg, var(--shadow), #000); box-shadow: 0 0 16px rgba(179,106,245,.3); }
-
-    /* Ensure default focusring is visible on keyboard */
-    :focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; border-radius: 8px; }
+    .devlog pre { margin:0; font-size:12px; max-height: 200px; overflow:auto; }
   </style>
 </head>
+
 <body>
-  <!-- HUD (2D overlay for quick nav / accessible controls) -->
-  <div class="hud">
-    <a class="brand" href="#" onclick="window.CRACK.teleportTo('hub'); return false;">
-      <div class="logo" aria-hidden="true"></div>
-      <span>Crack.ai</span>
-    </a>
-    <div class="nav" role="toolbar" aria-label="Floating VR header menu">
-      <button onclick="window.CRACK.teleportTo('login')">Login</button>
-      <button onclick="window.CRACK.teleportTo('dashboard')">Dashboard</button>
-      <button onclick="window.CRACK.teleportTo('leaderboard')">Leaderboard</button>
-      <button onclick="window.CRACK.teleportTo('about')">About</button>
-      <button class="primary" onclick="window.CRACK.teleportTo('hub')">VR Hub</button>
-    </div>
-  </div>
-  <div class="prompt">Tip: Gaze or point at holographic tiles to interact • Click the VR button for headset mode</div>
-  <div class="footerHud">
-    <div class="footer">
-      <a href="#" onclick="window.CRACK.teleportTo('hub'); return false;">Quick Hub</a>
-      <a href="#" onclick="window.CRACK.teleportTo('login'); return false;">Login</a>
-      <a href="#" onclick="window.CRACK.teleportTo('dashboard'); return false;">Dashboard</a>
-      <a href="#" onclick="window.CRACK.teleportTo('leaderboard'); return false;">Leaderboard</a>
-      <a href="#" onclick="window.CRACK.toggleMusic(); return false;">Toggle Music</a>
-    </div>
-  </div>
+  <div class="hint">Tip: Put on Meta Quest 3 → open browser → load this page → press VR button → use triggers to interact</div>
+  <div class="devlog" id="log"><strong>Dev Log</strong><pre id="logPre">starting…</pre></div>
 
-  <!-- ASSETS -->
-  <a-assets timeout="10000">
-    <!-- Video asset (sample lecture) -->
-    <video id="lecture" src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" crossorigin="anonymous" preload="auto" webkit-playsinline playsinline></video>
+  <!-- A-Frame scene: enable WebXR features useful for Quest3 -->
+  <a-scene
+    webxr="optionalFeatures: local-floor, hand-tracking, bounded-floor"
+    renderer="antialias: true; colorManagement: true"
+    physics="driver: cannon"
+    background="color: #010014"
+    cursor="rayOrigin: mouse"
+  >
 
-    <!-- SFX -->
-    <audio id="uiClick" src="https://cdn.jsdelivr.net/gh/feelform/sfx@main/ui-click-01.mp3" crossorigin="anonymous"></audio>
-    <audio id="ambient" src="https://cdn.jsdelivr.net/gh/feelform/sfx@main/ambient-pad-01.mp3" crossorigin="anonymous" loop></audio>
+    <!-- lighting & sky -->
+    <a-entity light="type: hemisphere; skyColor: #b3a2ff; groundColor: #05040a; intensity: 0.9"></a-entity>
+    <a-entity light="type: directional; color: #7d5cff; intensity: 0.6" position="2 5 1"></a-entity>
+    <a-sky color="#070317"></a-sky>
 
-    <!-- Textures -->
-    <img id="gridTex" src="https://cdn.jsdelivr.net/gh/feelform/public@main/textures/grid-dark-1024.png" crossorigin="anonymous" />
+    <!-- floor -->
+    <a-plane rotation="-90 0 0" width="60" height="60" color="#04030a" material="roughness:0.95; metalness:0.02" static-body></a-plane>
 
-    <!-- Shaders / mixins for quick reuse -->
-    <a-mixin id="tile" geometry="primitive: plane; width: 1.2; height: 0.6" material="color: #111; metalness:0.2; roughness:0.4; opacity:0.9; transparent:true" event-set__enter="scale:1.05 1.05 1" event-set__leave="scale:1 1 1"></a-mixin>
-    <a-mixin id="purpleGlow" material="color:#B36AF5; emissive:#5D3B91; emissiveIntensity:0.15; metalness:0.4; roughness:0.2"></a-mixin>
-    <a-mixin id="glassPanel" geometry="primitive: plane; width: 2.6; height: 1.4;" material="color:#0b0b0f; opacity:0.72; transparent:true; metalness:0.2; roughness:0.6; src:#gridTex; srcRepeat:3 2;">
-    </a-mixin>
-  </a-assets>
-
-  <!-- SCENE -->
-  <a-scene renderer="colorManagement: true; physicallyCorrectLights: true; toneMapping: ACESFilmic;" background="color: #000" cursor="rayOrigin: mouse" raycaster="objects: .clickable" vr-mode-ui="enabled: true">
-    <!-- Sky & lighting -->
-    <a-sky color="#000"></a-sky>
-    <a-entity light="type: hemisphere; color:#cbb3ff; groundColor:#06030a; intensity:0.7"></a-entity>
-    <a-entity light="type: directional; color:#B36AF5; intensity:0.45" position="2 4 1"></a-entity>
-    <a-entity light="type: point; color:#8E58C9; intensity:0.6" position="-2 2 -2"></a-entity>
-
-    <!-- Floor grid -->
-    <a-plane rotation="-90 0 0" width="60" height="60" material="src:#gridTex; repeat: 40 40; color:#050509; metalness:0.1; roughness:0.9"></a-plane>
-
-    <!-- PLAYER / CAMERA -->
-    <a-entity id="rig" movement-controls="fly: false" position="0 1.6 6">
+    <!-- Camera rig -->
+    <a-entity id="rig" position="0 1.6 4">
       <a-entity id="camera" camera look-controls wasd-controls="acceleration: 20"></a-entity>
-      <a-entity cursor="fuse: false" raycaster="objects: .clickable" position="0 0 -1"></a-entity>
+
+      <!-- Visual reticle for gaze fallback (not used when controllers present) -->
+      <a-entity cursor="fuse:false; rayOrigin: mouse" raycaster="objects: .clickable" position="0 0 -1">
+        <a-ring radius-inner="0.005" radius-outer="0.01" color="#fff"></a-ring>
+      </a-entity>
+
+      <!-- LEFT controller: will map automatically to Quest left controller -->
+      <a-entity id="leftController"
+                laser-controls="hand: left; model: true"
+                oculus-touch-controls="hand: left"
+                super-hands="colliderEvent: collisions; colliderEventProperty: els; grabStartButtons: triggerdown; grabEndButtons: triggerup"
+                raycaster="objects: .clickable"
+                line="color: #6AE3FF; opacity: 0.9"
+      ></a-entity>
+
+      <!-- RIGHT controller: will map automatically to Quest right controller -->
+      <a-entity id="rightController"
+                laser-controls="hand: right; model: true"
+                oculus-touch-controls="hand: right"
+                super-hands="colliderEvent: collisions; colliderEventProperty: els; grabStartButtons: triggerdown; grabEndButtons: triggerup"
+                raycaster="objects: .clickable"
+                line="color: #B36AF5; opacity: 0.95"
+      ></a-entity>
+
+      <!-- Hand tracking fallback entities (invisible unless hand-tracking active) -->
+      <a-entity id="leftHand" hand-tracking-controls="hand: left"></a-entity>
+      <a-entity id="rightHand" hand-tracking-controls="hand: right"></a-entity>
     </a-entity>
 
-    <!-- 3D Title -->
-    <a-entity position="0 3.2 -2.8">
-      <a-entity text="value: Crack.ai — Your NEET Journey, Reimagined in VR; width: 7; color: #fff; anchor: center; align: center; font: mozillavr;" position="0 0 0"></a-entity>
-      <a-entity text="value: Learn. Play. Conquer.; width: 5; color: #B36AF5; anchor: center; align: center; font: mozillavr;" position="0 -0.5 0"></a-entity>
+    <!-- Teleport rings (clickable) -->
+    <a-entity id="teleportTargets">
+      <a-ring class="clickable teleport-target" position="-3 0.15 -2" rotation="-90 0 0" color="#2a1736" radius-inner="0.6" radius-outer="0.78" material="emissive:#5D3B91; emissiveIntensity:0.2"></a-ring>
+      <a-text value="Hub" position="-3 0.6 -2" align="center" color="#d6b7ff"></a-text>
+
+      <a-ring class="clickable teleport-target" position="0 0.15 -2.5" rotation="-90 0 0" color="#10101a" radius-inner="0.6" radius-outer="0.78" material="emissive:#6AE3FF; emissiveIntensity:0.15"></a-ring>
+      <a-text value="Lecture" position="0 0.6 -2.5" align="center" color="#9fefff"></a-text>
+
+      <a-ring class="clickable teleport-target" position="3 0.15 -2" rotation="-90 0 0" color="#0b0810" radius-inner="0.6" radius-outer="0.78" material="emissive:#B36AF5; emissiveIntensity:0.18"></a-ring>
+      <a-text value="Explore" position="3 0.6 -2" align="center" color="#f0d7ff"></a-text>
     </a-entity>
 
-    <!-- HUB TELEPORT RINGS -->
-    <a-entity id="hub" position="0 0 -3">
-      <a-entity id="ring-dashboard" class="clickable" geometry="primitive: torus; radius: 0.9; radiusTubular: 0.07" material="color:#1a1126; emissive:#5D3B91; emissiveIntensity:0.3; metalness:0.6" position="-3 0.15 -1"
-                event-set__enter="material.emissiveIntensity:0.7" event-set__leave="material.emissiveIntensity:0.3" 
-                teleport-target="name: dashboard">
-        <a-entity text="value: Dashboard; width: 3; color:#cbb3ff; align: center" position="0 1 0"></a-entity>
-      </a-entity>
-      <a-entity id="ring-login" class="clickable" geometry="primitive: torus; radius: 0.9; radiusTubular: 0.07" material="color:#111; emissive:#8E58C9; emissiveIntensity:0.3; metalness:0.6" position="0 0.15 0" teleport-target="name: login"
-                event-set__enter="material.emissiveIntensity:0.8" event-set__leave="material.emissiveIntensity:0.3">
-        <a-entity text="value: Login; width: 3; color:#e1d7ff; align: center" position="0 1 0"></a-entity>
-      </a-entity>
-      <a-entity id="ring-leaderboard" class="clickable" geometry="primitive: torus; radius: 0.9; radiusTubular: 0.07" material="color:#111; emissive:#B36AF5; emissiveIntensity:0.35; metalness:0.6" position="3 0.15 -1" teleport-target="name: leaderboard"
-                event-set__enter="material.emissiveIntensity:0.9" event-set__leave="material.emissiveIntensity:0.35">
-        <a-entity text="value: Leaderboard; width: 3; color:#f2eaff; align: center" position="0 1 0"></a-entity>
-      </a-entity>
-    </a-entity>
+    <!-- Interactable demo objects -->
+    <a-box class="clickable" position="-1 1 -1.8" depth="0.45" height="0.45" width="0.45" color="#6AE3FF"
+           event-set__mouseenter="_event: mouseenter; scale: 1.08 1.08 1.08"
+           event-set__mouseleave="_event: mouseleave; scale: 1 1 1"
+           grabbable
+           dynamic-body>
+      <a-text value="Grab Me" align="center" color="#001221" position="0 0 0.26" width="1.5"></a-text>
+    </a-box>
 
-    <!-- LOGIN SCENE PANEL -->
-    <a-entity id="panel-login" position="0 1.6 -2" visible="false">
-      <a-entity mixin="glassPanel"></a-entity>
-      <a-entity position="0 0 0.01">
-        <a-text value="Step 1 — Log in & Suit Up" width="2.4" align="center" color="#FFFFFF" position="0 0.5 0"></a-text>
-        <a-text value="Enter your details to sync progress" width="2.2" align="center" color="#B36AF5" position="0 0.3 0"></a-text>
-        <!-- Simple login 'form' (VR buttons) -->
-        <a-entity position="0 -0.15 0">
-          <a-entity class="clickable" geometry="primitive: plane; width: 0.9; height: 0.24" material="color:#0c0c12; opacity:0.9" position="0 0 0.01" event-set__enter="material.color:#151524" event-set__leave="material.color:#0c0c12" onclick="CRACK.fakeLogin()">
-            <a-text value="Login with Magic Link" color="#ffffff" width="1.6" align="center" position="0 0 0.01"></a-text>
-          </a-entity>
-          <a-entity geometry="primitive: plane; width: 0.9; height: 0.24" material="color:#0c0c12; opacity:0.85" position="0 -0.3 0.01">
-            <a-text value="Or continue as Guest" color="#B36AF5" width="1.6" align="center" position="0 0 0.01"></a-text>
-          </a-entity>
-        </a-entity>
-      </a-entity>
-    </a-entity>
+    <a-sphere class="clickable" position="1 1 -2.2" radius="0.28" color="#B36AF5"
+              event-set__mouseenter="_event: mouseenter; scale: 1.08 1.08 1.08"
+              event-set__mouseleave="_event: mouseleave; scale: 1 1 1"
+              grabbable
+              dynamic-body>
+      <a-text value="Pick" align="center" color="#fff" width="1.2" position="0 0 0.3"></a-text>
+    </a-sphere>
 
-    <!-- DASHBOARD / JOURNEY MAP -->
-    <a-entity id="panel-dashboard" position="0 1.6 -2.2" visible="false">
-      <a-entity mixin="glassPanel"></a-entity>
-      <a-entity position="0 0 0.01">
-        <a-text value="VR Journey Map" width="2.2" align="center" color="#FFFFFF" position="0 0.55 0"></a-text>
-        <a-text value="Select a chapter to begin" width="1.8" align="center" color="#B36AF5" position="0 0.35 0"></a-text>
-        <!-- Holographic chapter tiles -->
-        <a-entity id="chapters" position="0 -0.15 0">
-          <a-entity class="clickable tile" mixin="tile" position="-0.9 0.35 0.02" tile="title: Biology; key: bio"></a-entity>
-          <a-entity class="clickable tile" mixin="tile" position="0 0.35 0.02" tile="title: Chemistry; key: chem"></a-entity>
-          <a-entity class="clickable tile" mixin="tile" position="0.9 0.35 0.02" tile="title: Physics; key: phys"></a-entity>
-
-          <a-entity class="clickable tile" mixin="tile" position="-0.9 -0.05 0.02" tile="title: Human Anatomy; key: anatomy"></a-entity>
-          <a-entity class="clickable tile" mixin="tile" position="0 -0.05 0.02" tile="title: Organic Reactions; key: organic"></a-entity>
-          <a-entity class="clickable tile" mixin="tile" position="0.9 -0.05 0.02" tile="title: Electrostatics; key: electro"></a-entity>
-        </a-entity>
-      </a-entity>
-    </a-entity>
-
-    <!-- LECTURE THEATRE (YouTube stand-in via sample video) -->
-    <a-entity id="panel-lecture" position="0 1.6 -3.2" visible="false">
-      <a-entity geometry="primitive: plane; width: 4.6; height: 2.6" material="color:#0b0b10; opacity:0.9; transparent:true"></a-entity>
-      <a-text value="Step 3 — Learn from the Best" width="4" align="center" color="#fff" position="0 1.7 0.01"></a-text>
-      <a-video src="#lecture" width="3.8" height="2.1" position="0 0 0.02"></a-video>
-      <!-- Floating flashcards -->
-      <a-entity position="-2 1.3 0.06">
-        <a-entity geometry="primitive: plane; width:1.1; height:0.5" material="color:#0e0e15; opacity:0.85" position="0 0 0.01"></a-entity>
-        <a-text id="flashcard" value="Flashcard: Photosynthesis uses light to convert CO2 to glucose." width="1.9" color="#B36AF5" position="-0.5 0 0.02"></a-text>
+    <!-- Interactive panel to test triggerdown event -->
+    <a-entity id="uiPanel" position="0 1.3 -1.1">
+      <a-plane class="clickable" width="1.8" height="0.9" color="#0b0b10" opacity="0.95"></a-plane>
+      <a-text value="Press trigger to toggle video" width="1.6" color="#e8dfff" position="0 0.28 0.02"></a-text>
+      <a-entity id="playButton" class="clickable" geometry="primitive: plane; width:0.9; height:0.26" material="color:#151224" position="0 -0.22 0.02" event-set_enter="material.color:#1c1530" event-set_leave="material.color:#151224">
+        <a-text id="playLabel" value="Play / Pause" color="#fff" width="1.2" align="center" position="0 0 0.01"></a-text>
       </a-entity>
     </a-entity>
 
-    <!-- QUIZ ARENA -->
-    <a-entity id="panel-quiz" position="0 1.6 -2.2" visible="false">
-      <a-entity mixin="glassPanel"></a-entity>
-      <a-entity position="0 0 0.01">
-        <a-text id="quiz-title" value="Step 4 — Test Your Skills" width="2.4" align="center" color="#FFFFFF" position="0 0.55 0"></a-text>
-        <a-text id="quiz-question" value="Question will appear here" width="2.2" align="center" color="#B36AF5" position="0 0.25 0"></a-text>
-        <a-entity id="quiz-options" position="0 -0.1 0"></a-entity>
-        <a-entity class="clickable" geometry="primitive: plane; width: 0.9; height: 0.26" material="color:#0c0c12; opacity:0.9" position="0 -0.55 0.02" onclick="CRACK.nextQuestion()">
-          <a-text value="Next" color="#ffffff" width="1.5" align="center"></a-text>
-        </a-entity>
-      </a-entity>
+    <!-- Demo video panel (use mp4) -->
+    <a-entity position="0 1.6 -3.2">
+      <a-plane width="3.6" height="2.1" material="color:#000; opacity:0.92"></a-plane>
+      <a-video id="demoVideo" src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4"
+               width="3.2" height="1.8" position="0 0 0.02"></a-video>
     </a-entity>
 
-    <!-- ANALYTICS: Bars + Radar (simple line polygon) -->
-    <a-entity id="panel-analytics" position="0 1.6 -2.6" visible="false">
-      <a-entity mixin="glassPanel"></a-entity>
-      <a-text value="Step 5 — Spot the Weak Links" width="2.4" align="center" color="#FFFFFF" position="0 2.2 0"></a-text>
-      <!-- Bar graph -->
-      <a-entity id="bars" position="-0.8 0.3 0.05"></a-entity>
-      <!-- Radar chart (polygon using a-entity line) -->
-      <a-entity id="radar" position="0.9 0.8 0.05"></a-entity>
-    </a-entity>
-
-    <!-- 3D EXPLORATION ROOM (Step 6) -->
-    <a-entity id="room-explore" position="0 1.6 -3.5" visible="false">
-      <a-entity geometry="primitive: box; depth:6; height:3; width:6" material="color:#05050a; metalness:0.1; roughness:0.9; opacity:0.85; side: back; transparent:true"></a-entity>
-      <a-text value="Step 6 — Dive into VR Mode" width="4.2" align="center" color="#FFFFFF" position="0 1.2 0.02"></a-text>
-      <!-- Biology: human heart model (placeholder with primitives) -->
-      <a-entity position="-1 0.2 0.4">
-        <a-sphere radius="0.4" color="#111"></a-sphere>
-        <a-cylinder height="0.5" radius="0.12" position="0 0.6 0" color="#0f0f16"></a-cylinder>
-        <a-entity text="value: Anatomy: Heart (placeholder); color:#B36AF5; width:2" position="-0.8 1.2 0"></a-entity>
-      </a-entity>
-      <!-- Chemistry: molecule (ball-and-stick) -->
-      <a-entity id="molecule" position="0 0.3 -0.3">
-        <a-sphere radius="0.12" color="#B36AF5" position="0 0 0"></a-sphere>
-        <a-sphere radius="0.08" color="#8E58C9" position="0.35 0.1 0"></a-sphere>
-        <a-cylinder radius="0.02" height="0.36" color="#3F2A5D" rotation="0 0 90" position="0.18 0.05 0"></a-cylinder>
-        <a-entity animation="property: rotation; to: 0 360 0; loop: true; dur: 12000; easing: linear"></a-entity>
-        <a-entity text="value: Chemistry: Molecule (placeholder); color:#B36AF5; width:2" position="-0.8 1.2 0"></a-entity>
-      </a-entity>
-      <!-- Physics: force diagram (arrows) -->
-      <a-entity position="1 0.3 0.2">
-        <a-box depth="0.2" height="0.2" width="0.2" color="#0f0f16"></a-box>
-        <a-cylinder radius="0.01" height="0.6" color="#B36AF5" position="0 0.4 0" rotation="0 0 90"></a-cylinder>
-        <a-cone radius-bottom="0.05" radius-top="0.001" height="0.12" color="#B36AF5" position="0 0.7 0" rotation="0 0 90"></a-cone>
-        <a-entity text="value: Physics: Force (Fx); color:#B36AF5; width:1.5" position="-0.5 1.2 0"></a-entity>
-      </a-entity>
-    </a-entity>
-
-    <!-- RE-CHALLENGE (targeted quiz) -->
-    <a-entity id="panel-requiz" position="0 1.6 -2.2" visible="false">
-      <a-entity mixin="glassPanel"></a-entity>
-      <a-text value="Step 7 — Re‑Challenge Yourself" width="2.4" align="center" color="#FFFFFF" position="0 0.6 0"></a-text>
-      <a-text value="Focus: Weak topics identified" width="2.0" align="center" color="#B36AF5" position="0 0.35 0"></a-text>
-      <a-entity class="clickable" geometry="primitive: plane; width: 0.9; height: 0.26" material="color:#0c0c12; opacity:0.9" position="0 -0.1 0.02" onclick="CRACK.startTargetedQuiz()">
-        <a-text value="Start Targeted Quiz" color="#ffffff" width="1.6" align="center"></a-text>
-      </a-entity>
-    </a-entity>
-
-    <!-- PROGRESS & GAMIFICATION -->
-    <a-entity id="panel-progress" position="0 1.6 -2.6" visible="false">
-      <a-entity mixin="glassPanel"></a-entity>
-      <a-text value="Step 8 — Track Your Progress" width="2.4" align="center" color="#FFFFFF" position="0 0.55 0"></a-text>
-      <a-entity position="-1 0 0.05">
-        <a-text value="XP" color="#fff" width="1.5" position="0 0.2 0"></a-text>
-        <a-plane width="1.6" height="0.2" color="#151524"></a-plane>
-        <a-plane id="xpbar" width="0.8" height="0.2" color="#B36AF5" position="-0.4 0 0.01" anchor="left"></a-plane>
-      </a-entity>
-      <a-entity position="0.5 0 0.05">
-        <a-text value="Badges" color="#fff" width="1.5" position="0 0.2 0"></a-text>
-        <a-entity id="badges"></a-entity>
-      </a-entity>
-    </a-entity>
-
-    <!-- LEADERBOARD / MEGA BOSS QUIZ -->
-    <a-entity id="panel-leaderboard" position="0 1.6 -2.4" visible="false">
-      <a-entity mixin="glassPanel"></a-entity>
-      <a-text value="Step 10 — Mega Boss Quiz & Leaderboard" width="2.6" align="center" color="#FFFFFF" position="0 0.6 0"></a-text>
-      <a-entity id="leaderboard" position="0 -0.05 0.05"></a-entity>
-      <a-entity class="clickable" geometry="primitive: plane; width: 1.2; height: 0.28" material="color:#0c0c12; opacity:0.95" position="0 -0.6 0.02" onclick="CRACK.startMegaQuiz()">
-        <a-text value="Start Mega Boss Quiz" color="#ffffff" width="2" align="center"></a-text>
-      </a-entity>
-    </a-entity>
-
-    <!-- ABOUT / CONTACT -->
-    <a-entity id="panel-about" position="0 1.6 -2.2" visible="false">
-      <a-entity mixin="glassPanel"></a-entity>
-      <a-text value="About Crack.ai" width="2.4" align="center" color="#FFFFFF" position="0 0.55 0"></a-text>
-      <a-text value="A-Frame + Three.js • WebXR • Immersive NEET Prep" width="2.2" align="center" color="#B36AF5" position="0 0.35 0"></a-text>
-      <a-text value="Contact: hello@crack.ai" width="2.0" align="center" color="#b7a8d9" position="0 0.1 0"></a-text>
-    </a-entity>
-
-    <!-- Subtle ambient music at hub start (can be toggled) -->
-    <a-entity id="ambientAudio" sound="src: #ambient; autoplay: true; loop: true; volume: 0.15"></a-entity>
   </a-scene>
 
   <script>
-    /* ==========================
-       Utilities & components
-       ========================== */
-    const CRACK = window.CRACK = {
-      state: {
-        active: 'hub',
-        questions: [],
-        qIndex: 0,
-        score: 0,
-        xp: 40,
-        weakTopics: ['Organic', 'Electrostatics']
-      },
-      teleportTo(name){
-        const map = {
-          hub: [],
-          login: ['panel-login'],
-          dashboard: ['panel-dashboard'],
-          lecture: ['panel-lecture'],
-          quiz: ['panel-quiz'],
-          analytics: ['panel-analytics'],
-          explore: ['room-explore'],
-          requiz: ['panel-requiz'],
-          progress: ['panel-progress'],
-          leaderboard: ['panel-leaderboard'],
-          about: ['panel-about']
-        };
-        // Hide all panels
-        document.querySelectorAll('[id^="panel-"], #room-explore').forEach(el => el.setAttribute('visible', false));
-        // Show requested
-        (map[name]||[]).forEach(id => document.getElementById(id).setAttribute('visible', true));
-        // Move rig to nice viewing spot
-        const rig = document.getElementById('rig');
-        if(name==='hub') rig.setAttribute('position','0 1.6 6');
-        if(name==='login') rig.setAttribute('position','0 1.6 2.8');
-        if(name==='dashboard') rig.setAttribute('position','0 1.6 2.8');
-        if(name==='lecture') rig.setAttribute('position','0 1.6 3.6');
-        if(name==='quiz') rig.setAttribute('position','0 1.6 2.8');
-        if(name==='analytics') rig.setAttribute('position','0 1.6 3.2');
-        if(name==='explore') rig.setAttribute('position','0 1.6 3.8');
-        if(name==='progress') rig.setAttribute('position','0 1.6 3.2');
-        if(name==='leaderboard') rig.setAttribute('position','0 1.6 3.2');
-        if(name==='about') rig.setAttribute('position','0 1.6 2.8');
-        // Save
-        CRACK.state.active = name;
-        // sfx
-        const click = document.querySelector('#uiClick'); if(click){ click.pause(); click.currentTime = 0; click.play(); }
-      },
-      toggleMusic(){
-        const el = document.getElementById('ambientAudio');
-        if(!el) return;
-        const s = el.components.sound;
-        if(s){ s.isPlaying ? s.pauseSound() : s.playSound(); }
-      },
-      fakeLogin(){
-        alert('Pretend login successful! (Hook this to your MERN backend auth)');
-        this.teleportTo('dashboard');
-      },
-      /* Quiz system (demo) */
-      initQuiz(){
-        // Simple demo questions (replace with AI generator via API)
-        this.state.questions = [
-          {q:'Which organelle is the powerhouse of the cell?', opts:['Nucleus','Mitochondria','Ribosome','Golgi'], a:1, topic:'Biology'},
-          {q:'Avogadro number is ~?', opts:['6.022×10^23','9.81 m/s^2','3×10^8 m/s','1.6×10^-19 C'], a:0, topic:'Chemistry'},
-          {q:'Electric field lines of a positive charge are directed…', opts:['Inward','Outward','Circular','Random'], a:1, topic:'Physics'},
-          {q:'Heart has how many chambers?', opts:['2','3','4','5'], a:2, topic:'Biology'},
-          {q:'Benzene has how many pi bonds?', opts:['1','2','3','6'], a:2, topic:'Chemistry'}
-        ];
-        this.state.qIndex = 0; this.state.score = 0;
-        this.renderQuestion();
-      },
-      renderQuestion(){
-        const q = this.state.questions[this.state.qIndex];
-        const qText = document.getElementById('quiz-question');
-        qText.setAttribute('value', (this.state.qIndex+1)+'. '+q.q);
-        const container = document.getElementById('quiz-options');
-        container.innerHTML = '';
-        q.opts.forEach((opt,i)=>{
-          const wrapper = document.createElement('a-entity');
-          wrapper.setAttribute('class','clickable');
-          wrapper.setAttribute('geometry','primitive: plane; width: 1.9; height: 0.26');
-          wrapper.setAttribute('material','color:#0c0c12; opacity:0.9');
-          wrapper.setAttribute('position', `0 ${0.3 - i*0.22} 0.02`);
-          wrapper.addEventListener('mouseenter',()=>wrapper.setAttribute('material','color:#151524; opacity:0.95'));
-          wrapper.addEventListener('mouseleave',()=>wrapper.setAttribute('material','color:#0c0c12; opacity:0.9'));
-          wrapper.addEventListener('click',()=>{
-            const correct = (i===q.a);
-            if(correct){ CRACK.state.score++; CRACK.bumpXP(3); wrapper.setAttribute('material','color:#1f1730'); }
-            else { wrapper.setAttribute('material','color:#220d2e'); }
-          });
-          const label = document.createElement('a-text');
-          label.setAttribute('value', opt);
-          label.setAttribute('color', '#ffffff');
-          label.setAttribute('width', '2.4');
-          label.setAttribute('align', 'center');
-          wrapper.appendChild(label);
-          container.appendChild(wrapper);
-        });
-      },
-      nextQuestion(){
-        this.state.qIndex++;
-        if(this.state.qIndex >= this.state.questions.length){
-          alert(`Quiz complete! Score: ${this.state.score}/${this.state.questions.length}`);
-          this.renderAnalytics();
-          this.teleportTo('analytics');
-        } else { this.renderQuestion(); }
-      },
-      startTargetedQuiz(){
-        alert('Starting targeted quiz on: '+this.state.weakTopics.join(', '));
-        this.initQuiz();
-        this.teleportTo('quiz');
-      },
-      startMegaQuiz(){
-        alert('Mega Boss Quiz — 25 questions across all subjects (demo)!');
-        this.initQuiz(); this.teleportTo('quiz');
-      },
-      /* Analytics visuals */
-      renderAnalytics(){
-        // Bars
-        const bars = document.getElementById('bars');
-        bars.innerHTML = '';
-        const topics = [
-          {name:'Biology', v: Math.round(Math.random()*100)},
-          {name:'Chem', v: Math.round(Math.random()*100)},
-          {name:'Physics', v: Math.round(Math.random()*100)}
-        ];
-        topics.forEach((t,idx)=>{
-          const h = 0.01 + (t.v/100)*0.9;
-          const bar = document.createElement('a-box');
-          bar.setAttribute('width','0.25');
-          bar.setAttribute('depth','0.12');
-          bar.setAttribute('height', h.toFixed(2));
-          bar.setAttribute('position', `${idx*0.4} ${h/2} 0`);
-          bar.setAttribute('material','color:#1a1226; metalness:0.2; roughness:0.4; emissive:#5D3B91; emissiveIntensity:0.2');
-          const label = document.createElement('a-text');
-          label.setAttribute('value', `${t.name} ${t.v}%`);
-          label.setAttribute('color', '#B36AF5');
-          label.setAttribute('width', '1.4');
-          label.setAttribute('position', `${idx*0.4 - 0.23} ${h + 0.1} 0`);
-          bars.appendChild(bar); bars.appendChild(label);
-        });
-        // Radar — simple hex polygon based on random metrics
-        const radar = document.getElementById('radar');
-        radar.innerHTML = '';
-        const metrics = [Math.random(),Math.random(),Math.random(),Math.random(),Math.random(),Math.random()];
-        const pts = [];
-        const r = 0.55;
-        for(let i=0;i<6;i++){
-          const ang = (i/6)*Math.PI*2;
-          const m = metrics[i]*r;
-          pts.push(`${(Math.cos(ang)*m).toFixed(3)} ${(Math.sin(ang)*m).toFixed(3)} 0`);
-        }
-        // outline
-        const grid = document.createElement('a-entity');
-        grid.setAttribute('line', `start: ${-r} 0 0; end: ${r} 0 0; color: #241832`);
-        radar.appendChild(grid);
-        // polygon path
-        const poly = document.createElement('a-entity');
-        poly.setAttribute('line', `path: ${pts.join(', ')}; color: #B36AF5`);
-        radar.appendChild(poly);
-      },
-      bumpXP(delta){
-        this.state.xp = Math.min(100, this.state.xp + delta);
-        const w = 1.6 * (this.state.xp/100);
-        const xpbar = document.getElementById('xpbar');
-        if(xpbar){ xpbar.setAttribute('width', w.toFixed(2)); xpbar.setAttribute('position', `${-0.8 + w/2} 0 0.01`); }
-      },
-      renderBadges(){
-        const wrap = document.getElementById('badges');
-        wrap.innerHTML = '';
-        const badges = ['Streak 7d','Biology Ace','Physics Pro'];
-        badges.forEach((b,i)=>{
-          const p = document.createElement('a-entity');
-          p.setAttribute('geometry','primitive: circle; radius: 0.13');
-          p.setAttribute('material','color:#0e0e15; emissive:#241832; emissiveIntensity:0.3');
-          p.setAttribute('position', `${i*0.35} -0.15 0`);
-          const t = document.createElement('a-text');
-          t.setAttribute('value', b);
-          t.setAttribute('color','#cbb3ff'); t.setAttribute('width','1.2');
-          t.setAttribute('position', `${i*0.35 - 0.3} -0.4 0`);
-          wrap.appendChild(p); wrap.appendChild(t);
-        });
-      },
-      renderLeaderboard(){
-        const el = document.getElementById('leaderboard');
-        el.innerHTML = '';
-        const data = [
-          {name:'Nova', xp: 980},
-          {name:'Quanta', xp: 920},
-          {name:'Photon', xp: 870},
-          {name:'Ion', xp: 850},
-          {name:'You', xp: Math.floor(600 + Math.random()*200)}
-        ];
-        data.forEach((row,i)=>{
-          const y = 0.3 - i*0.18;
-          const rowEl = document.createElement('a-entity');
-          rowEl.setAttribute('geometry','primitive: plane; width: 2.2; height: 0.16');
-          rowEl.setAttribute('material','color:#0c0c12; opacity:0.85');
-          rowEl.setAttribute('position', `0 ${y} 0.02`);
-          const rank = document.createElement('a-text'); rank.setAttribute('value', `#${i+1}`); rank.setAttribute('position','-0.95 -0.05 0.01'); rank.setAttribute('color','#b7a8d9'); rank.setAttribute('width','2');
-          const name = document.createElement('a-text'); name.setAttribute('value', row.name); name.setAttribute('position','-0.6 -0.05 0.01'); name.setAttribute('color','#fff'); name.setAttribute('width','2');
-          const xp = document.createElement('a-text'); xp.setAttribute('value', row.xp+' XP'); xp.setAttribute('position','0.7 -0.05 0.01'); xp.setAttribute('color','#B36AF5'); xp.setAttribute('width','2');
-          rowEl.appendChild(rank); rowEl.appendChild(name); rowEl.appendChild(xp); el.appendChild(rowEl);
-        });
-      }
-    };
+    // Basic dev log helper
+    const logPre = document.getElementById('logPre');
+    function log(msg){
+      console.log(msg);
+      logPre.textContent = (logPre.textContent + '\\n' + msg).slice(-6000);
+    }
 
-    // Simple custom component for chapter tiles
-    AFRAME.registerComponent('tile',{
-      schema: { title: {type:'string'}, key: {type:'string'} },
-      init(){
-        const title = document.createElement('a-text');
-        title.setAttribute('value', this.data.title);
-        title.setAttribute('color', '#cbb3ff');
-        title.setAttribute('width', '1.8');
-        title.setAttribute('align', 'center');
-        title.setAttribute('position', '0 0 0.02');
-        this.el.appendChild(title);
-        this.el.addEventListener('click', ()=>{
-          // On chapter click: go to lecture, then quiz
-          CRACK.teleportTo('lecture');
-          const v = document.querySelector('#lecture'); if(v){ v.play().catch(()=>{}); }
-          setTimeout(()=>{ CRACK.initQuiz(); CRACK.teleportTo('quiz'); }, 3000);
-        });
-      }
-    });
-
-    // Teleport ring behavior — attach to torus, then use teleportTo(map)
-    AFRAME.registerComponent('teleport-target',{
-      schema: { name: {type:'string'} },
-      init(){ this.el.addEventListener('click', ()=> CRACK.teleportTo(this.data.name)); }
-    });
-
-    // Boot
+    // Wait until A-Frame scene is ready
     window.addEventListener('load', () => {
-      CRACK.renderBadges();
-      CRACK.renderLeaderboard();
-      CRACK.renderAnalytics();
-      CRACK.bumpXP(0);
-      CRACK.teleportTo('hub');
+      const scene = document.querySelector('a-scene');
+      if (!scene) { log('A-Frame scene not found'); return; }
+
+      scene.addEventListener('enter-vr', (e) => log('Entered VR mode'));
+      scene.addEventListener('exit-vr', (e) => log('Exited VR mode'));
+      scene.addEventListener('loaded', () => log('Scene loaded'));
+
+      // Controllers
+      const left = document.getElementById('leftController');
+      const right = document.getElementById('rightController');
+
+      // Basic event listeners for the controllers
+      [left, right].forEach((ctrl, idx) => {
+        if(!ctrl) return;
+        const handName = idx===0 ? 'left' : 'right';
+
+        // XR input button events (common for many controllers)
+        ctrl.addEventListener('triggerdown', (ev) => {
+          log(${handName} triggerdown);
+          // Example: if pointing at playButton, trigger toggles video
+          checkUIInteraction(ev, 'triggerdown');
+        });
+        ctrl.addEventListener('triggerup', (ev) => {
+          log(${handName} triggerup);
+        });
+        ctrl.addEventListener('gripdown', (ev) => {
+          log(${handName} gripdown);
+        });
+        ctrl.addEventListener('gripup', (ev) => {
+          log(${handName} gripup);
+        });
+
+        // super-hands events (grab)
+        ctrl.addEventListener('grab-start', (ev) => {
+          const target = ev.detail && ev.detail.hand && ev.detail.hand.el ? ev.detail.hand.el : (ev.detail && ev.detail grabbed ? ev.detail.grabbed : null);
+          log(${handName} grab-start on ${ev.detail && ev.detail.hand ? ev.detail.hand.el.id || ev.detail.hand.el.tagName : 'unknown'});
+        });
+        ctrl.addEventListener('grab-end', (ev) => {
+          log(${handName} grab-end);
+        });
+
+        // When controller ray hits an element, raycaster-intersection event provides details
+        ctrl.addEventListener('raycaster-intersection', (ev) => {
+          // ev.detail.els is array of intersected elements
+          // log(${handName} intersect: ${ev.detail.els.map(e=>e.id||e.tagName).join(',')});
+        });
+      });
+
+      // Simple UI: toggle video when playButton is clicked via any controller
+      const playButton = document.getElementById('playButton');
+      const demoVideo = document.getElementById('demoVideo');
+
+      // Clicking with controllers triggers normal 'click' events on entities with .clickable
+      playButton.addEventListener('click', () => {
+        if(!demoVideo) return;
+        const comp = demoVideo.components.sound || demoVideo;
+        // For <a-video>, use play/pause methods
+        if(demoVideo.paused !== undefined){
+          demoVideo.paused ? demoVideo.play() : demoVideo.pause();
+          log(Video toggled; paused: ${demoVideo.paused});
+        } else {
+          // fallback
+          log('Video element missing play/pause API');
+        }
+      });
+
+      // Teleportation: clicking any .teleport-target moves rig to that position (with small offset)
+      document.querySelectorAll('.teleport-target').forEach(el => {
+        el.addEventListener('click', () => {
+          const rig = document.getElementById('rig');
+          const posAttr = el.getAttribute('position');
+          if (posAttr && rig) {
+            // move rig to same x,z but slightly behind the ring and keep y at 1.6
+            const nx = posAttr.x || posAttr[0] || 0;
+            const nz = posAttr.z || posAttr[2] || 0;
+            rig.setAttribute('position', ${nx} 1.6 ${nz + 1.2});
+            log(Teleported to ${nx},${nz});
+          }
+        });
+      });
+
+      // Ensure hands/controllers are displayed for Quest devices
+      // If hand-tracking active, 'hand-tracking-detector' events may be used in custom components
+      log('Initialization complete — ready to use controllers and hand tracking.');
     });
+
   </script>
 </body>
 </html>
